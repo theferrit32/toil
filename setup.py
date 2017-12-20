@@ -13,79 +13,18 @@
 # limitations under the License.
 
 from setuptools import find_packages, setup
-import sys
+
+botoRequirement = 'boto==2.38.0'
+
 
 def runSetup():
     """
     Calls setup(). This function exists so the setup() invocation preceded more internal
     functionality. The `version` module is imported dynamically by importVersion() below.
     """
-    boto = 'boto==2.38.0'
-    boto3 = 'boto3==1.4.7'
-    futures = 'futures==3.2.0'
-    pycryptodome = 'pycryptodome==3.5.1'
-    psutil = 'psutil==3.0.1'
-    protobuf = 'protobuf==3.5.1'
-    azureCosmosdbTable = 'azure-cosmosdb-table==0.37.1'
-    azureAnsible = 'ansible[azure]==2.5.0a1'
-    azureStorage = 'azure-storage==0.35.1'
-    secretstorage = 'secretstorage<3'
-    pynacl = 'pynacl==1.1.2'
-    gcs = 'google-cloud-storage==1.6.0'
-    gcs_oauth2_boto_plugin = 'gcs_oauth2_boto_plugin==1.14'
-    apacheLibcloud = 'apache-libcloud==2.2.1'
-    cwltool = 'cwltool==1.0.20180518123035'
-    schemaSalad = 'schema-salad >= 2.6, < 3'
-    galaxyLib = 'galaxy-lib==17.9.3'
-    htcondor = 'htcondor>=8.6.0'
-
-    mesos_reqs = [
-        psutil,
-        protobuf]
-    aws_reqs = [
-        boto,
-        boto3,
-        futures,
-        pycryptodome]
-    azure_reqs = [
-        azureCosmosdbTable,
-        secretstorage,
-        azureAnsible,
-        azureStorage]
-    encryption_reqs = [
-        pynacl]
-    google_reqs = [
-        gcs_oauth2_boto_plugin,  # is this being used??
-        apacheLibcloud,
-        gcs]
-    cwl_reqs = [
-        cwltool,
-        schemaSalad,
-        galaxyLib]
-    wdl_reqs = []
-    htcondor_reqs = [
-        htcondor]
-
-    all_reqs = \
-        mesos_reqs + \
-        aws_reqs + \
-        azure_reqs + \
-        encryption_reqs + \
-        google_reqs + \
-        cwl_reqs + \
-        htcondor_reqs
-
-    # htcondor is not supported by apple
-    if sys.platform != 'linux' or 'linux2':
-        all_reqs.remove(htcondor)
-
-    if not sys.version_info[0] == 2:
-        raise RuntimeError("Toil currently requires Python 2, but we're working on adding Python 3 support (#1780)")
-
     setup(
         name='toil',
         version=version.distVersion,
-        python_requires='~=2.7',
         description='Pipeline management software for clusters.',
         author='Benedict Paten',
         author_email='benedict@soe.usc.edu',
@@ -93,31 +32,38 @@ def runSetup():
         classifiers=["License :: OSI Approved :: Apache Software License"],
         license="Apache License v2.0",
         install_requires=[
-            'dill==0.2.7.1',
+            'bd2k-python-lib>=1.14a1.dev35',
+            'dill==0.2.5',
             'six>=1.10.0',
             'future',
             'requests==2.18.4',
-            'docker==2.5.1',
-            'subprocess32==3.5.1',
-            'python-dateutil'],
+            'docker==2.5.1'],
         extras_require={
-            'mesos': mesos_reqs,
-            'aws': aws_reqs,
-            'azure': azure_reqs,
-            'encryption': encryption_reqs,
-            'google': google_reqs,
-            'cwl': cwl_reqs,
-            'wdl': wdl_reqs,
-            'htcondor': htcondor_reqs,
-            'all': all_reqs},
+            'mesos': [
+                'psutil==3.0.1'],
+            'aws': [
+                botoRequirement,
+                'boto3==1.4.7',
+                'futures==3.0.5',
+                'pycrypto==2.6.1'],
+            'azure': [
+                'azure==2.0.0',
+                'azure-cosmosdb-table==0.37.1'],
+            'encryption': [
+                'pynacl==1.1.2'],
+            'google': [
+                'gcs_oauth2_boto_plugin==1.14',
+                botoRequirement],
+            'cwl': [
+                'cwltool',
+                'schema-salad >= 2.6, < 3',
+                'galaxy-lib==17.9.3',
+                'cwltest>=1.0.20170214185319']},
         package_dir={'': 'src'},
         packages=find_packages(where='src',
                                # Note that we intentionally include the top-level `test` package for
                                # functionality like the @experimental and @integrative decoratorss:
                                exclude=['*.test.*']),
-        package_data = {
-            '': ['*.yml', 'contrib/azure_rm.py', 'cloud-config'],
-        },
         # Unfortunately, the names of the entry points are hard-coded elsewhere in the code base so
         # you can't just change them here. Luckily, most of them are pretty unique strings, and thus
         # easy to search for.
@@ -127,7 +73,7 @@ def runSetup():
                 '_toil_worker = toil.worker:main',
                 'cwltoil = toil.cwl.cwltoil:main [cwl]',
                 'toil-cwl-runner = toil.cwl.cwltoil:main [cwl]',
-                'toil-wdl-runner = toil.wdl.toilwdl:main',
+                'cwl-runner = toil.cwl.cwltoil:main [cwl]',
                 '_toil_mesos_executor = toil.batchSystems.mesos.executor:main [mesos]']})
 
 

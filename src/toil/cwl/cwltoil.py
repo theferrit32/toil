@@ -978,6 +978,7 @@ def main(args=None, stdout=sys.stdout):
                                                 kwargs=make_tool_kwargs,
                                                 resolver=cwltool.resolver.tool_resolver,
                                                 strict=useStrict)
+                #print("tool: {}".format(vars(t)))
                 unsupportedRequirementsCheck(t.requirements)
             except cwltool.process.UnsupportedRequirement as e:
                 logging.error(e)
@@ -1045,6 +1046,9 @@ def main(args=None, stdout=sys.stdout):
                 return 33
 
             wf1.cwljob = job
+            print("toil: {}".format(vars(toil)))
+            print("toil config: {}".format(vars(toil.config)))
+            print("wf1: {}".format(vars(wf1)))
             outobj = toil.start(wf1)
 
         outobj = resolve_indirect(outobj)
