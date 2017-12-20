@@ -16,6 +16,10 @@ def _gridengineBatchSystemFactory():
     from toil.batchSystems.gridengine import GridEngineBatchSystem
     return GridEngineBatchSystem
 
+def _chronosBatchSystemFactory():
+    from toil.batchSystems.chronos import ChronosBatchSystem
+    return ChronosBatchSystem
+
 def _parasolBatchSystemFactory():
     from toil.batchSystems.parasol import ParasolBatchSystem
     return ParasolBatchSystem
@@ -42,6 +46,7 @@ def _torqueBatchSystemFactory():
 
 
 _DEFAULT_REGISTRY = {
+    'chronos'        : _chronosBatchSystemFactory,
     'parasol'        : _parasolBatchSystemFactory,
     'singleMachine'  : _singleMachineBatchSystemFactory,
     'single_machine' : _singleMachineBatchSystemFactory,
