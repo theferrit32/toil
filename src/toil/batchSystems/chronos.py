@@ -3,12 +3,12 @@ from future import standard_library
 standard_library.install_aliases()
 import logging
 import urllib
-from toil.batchSystems.abstractBatchSystem import AbstractBatchSystem
+from toil.batchSystems.abstractBatchSystem import AbstractBatchSystem, BatchSystemSupport
 import chronos
 
 logger = logging.getLogger(__name__)
 
-class ChronosBatchSystem(AbstractBatchSystem):
+class ChronosBatchSystem(BatchSystemSupport): #TODO look at how singleMachine batch system does clean up/shudown
     @classmethod
     def supportsWorkerCleanup(cls):
         return False
