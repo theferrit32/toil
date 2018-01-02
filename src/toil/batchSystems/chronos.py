@@ -5,7 +5,8 @@ import logging
 import urllib
 from toil.batchSystems.abstractBatchSystem import AbstractBatchSystem, BatchSystemSupport
 import chronos
-import datetime
+import time
+from threading import Thread
 from six.moves.queue import Empty, Queue
 
 logger = logging.getLogger(__name__)
@@ -36,14 +37,39 @@ class ChronosBatchSystem(BatchSystemSupport):
         }
         """
         self.issued_jobs = []
-        self.updated_jobs = Queue()
+        self.updated_jobs_queue = Queue()
         self.jobStoreID = None
+        self.running = True
         self.worker = Thread(target=self.updated_job_worker, args=())
         self.worker.start()
 
-    def updated_job_worker():
+    def updated_job_worker(self):
         # poll chronos api and check for changed job statuses
-        pass
+        client = chronos.connect("stars-app.renci.org/chronos", proto="https")
+        while self.running:
+            # jobs for the job store of this batch
+            remote_jobs = client.search(name=self.jobStoreID)
+            # job summary info, contains status for jobs, which we need
+            remote_jobs_summary = client._call("/scheduler/jobs/summary")["jobs"]
+
+            for cached_job in self.issued_jobs:
+                job_name = cached_job["name"]
+                remote_job = None
+                for j in remote_jobs_summary:
+                    if j["name"] == job_name:
+                        remote_job = j
+                if not remote_job:
+                    logger.error("Job '%s' not found in chronos" % job_name)
+                    return
+                if remote_job["status"] != cached_job["status"]:
+                    cached_job["status"] = remote_job["status"]
+
+                    proc_status = chronos_status_to_proc_status(cached_job["status"])
+                    logger.info("Job '%s' updated with status '%s'" % (job_name, cached_job["status"]))
+                    self.updated_jobs_queue.put(
+                        (job_name, proc_status, time.time() - cached_job["issued_time"])
+                    )
+            time.sleep(1)
 
     def setUserScript(self, userScript):
         raise NotImplementedError()
@@ -54,12 +80,12 @@ class ChronosBatchSystem(BatchSystemSupport):
     """
     def issueBatchJob(self, jobNode):
         # store jobStoreID as a way to reference this batch of jobs
-        self.jobStoreID = jobNode.jobStoreID
+        self.jobStoreID = jobNode.jobStoreID.replace("/", "-")
         logger.info("jobNode: {}".format(vars(jobNode)))
         logger.info("jobNode command: {}".format(jobNode.command))
         client = chronos.connect("stars-app.renci.org/chronos", proto="https")
-        job_name = "[%s] %s" % jobNode.jobStoreID, jobNode.jobName.split("/")[-1]
-        #job_name = job_name.replace("/", "-")
+        job_name = "%s_%s" % (jobNode.jobStoreID, jobNode.jobName.split("/")[-1])
+        job_name = job_name.replace("/", "-")
         job = {
             "name": job_name,
             "command": ( # replace /path/to/_toil_worker [args] with /path/to/workerscriptlauncher [args]
@@ -80,13 +106,15 @@ class ChronosBatchSystem(BatchSystemSupport):
             ]
         }
         logger.info("Creating job in chronos: \n%s" % job)
-        # TODO handle return value here
 
+        # TODO handle return value here
         ret = client.add(job)
         logger.info("Chronos ret: %s" % ret)
-        job["issued_time"] = datetime.datetime.now()
 
+        job["issued_time"] = time.time()
+        job["status"] = "fresh" # corresponds to status in chronos for jobs that have not yet run
         self.issued_jobs.append(job)
+
         #return self.issued_jobs.index(job)
         return job["name"]
 
@@ -131,26 +159,31 @@ class ChronosBatchSystem(BatchSystemSupport):
                     if "running" in j["state"]:
                         # look up local job obj which contains the issued time and compare to now
                         # (not the actual run time in mesos, just time since it was issued in toil)
+                        run_seconds = 0
                         for lj in self.issued_jobs:
-                            run_seconds = 0
                             if lj["name"] == j["name"]:
-                                run_delta = datetime.datetime.now() - lj["issued_time"]
-                                run_seconds = run_delta.total_seconds()
+                                run_seconds = time.time() - lj["issued_time"]
                         running_jobs[j["name"]] = run_seconds
         return running_jobs
 
+
     def getUpdatedBatchJob(self, maxWait):
-        client = chronos.connect("stars-app.renci.org/chronos", proto="https")
-        jobs = client.search(name=self.jobStoreID)
-        jobs_summary = client._call("/scheduler/jobs/summary")["jobs"]
+        while True:
+            try:
+                job_id, status, wallTime = self.updated_jobs_queue.get(timeout=maxWait)
+            except Empty:
+                return None
 
-
+            return job_id, status, wallTime
 
         return None
 
+
     def shutdown(self):
         logger.info("shutdown called")
-        pass
+        self.running = False
+        self.worker.join()
+
     def setEnv(self, name, value=None):
         raise NotImplementedError()
 
@@ -160,3 +193,10 @@ class ChronosBatchSystem(BatchSystemSupport):
     @classmethod
     def setOptions(cls, setOption):
         pass
+
+
+def chronos_status_to_proc_status(status):
+    if not status or status == "failure":
+        return 1
+    else:
+        return 0
