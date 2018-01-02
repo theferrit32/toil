@@ -5,10 +5,11 @@ import logging
 import urllib
 from toil.batchSystems.abstractBatchSystem import AbstractBatchSystem, BatchSystemSupport
 import chronos
-
+import datetime
+from six.moves.queue import Empty, Queue
 logger = logging.getLogger(__name__)
 
-class ChronosBatchSystem(BatchSystemSupport): #TODO look at how singleMachine batch system does clean up/shudown
+class ChronosBatchSystem(BatchSystemSupport):
     @classmethod
     def supportsWorkerCleanup(cls):
         return False
@@ -19,11 +20,28 @@ class ChronosBatchSystem(BatchSystemSupport): #TODO look at how singleMachine ba
 
     def __init__(self, config, maxCores, maxMemory, maxDisk):
         #super(ChronosBatchSystem, self).__init__(config, maxCores, maxMemory, maxDisk)
-        super(ChronosBatchSystem, self).__init__()
+        super(ChronosBatchSystem, self).__init__(config, maxCores, maxMemory, maxDisk)
         logger.info("config: {}".format(config))
 
+        """
+        List of jobs in format:
+        {
+            "name": <str>,
+            ... chronos job fields
+            "issued_time": <Date>,
+            "status": <success|failed>,
+            #"state": <idle|running|..>
+        }
+        """
         self.issued_jobs = []
+        self.updated_jobs = Queue()
         self.jobStoreID = None
+        self.worker = Thread(target=self.updated_job_worker, args=())
+        self.worker.start()
+
+    def updated_job_worker():
+        # poll chronos api and check for changed job statuses
+        pass
 
     def setUserScript(self, userScript):
         raise NotImplementedError()
@@ -38,8 +56,8 @@ class ChronosBatchSystem(BatchSystemSupport): #TODO look at how singleMachine ba
         logger.info("jobNode: {}".format(vars(jobNode)))
         logger.info("jobNode command: {}".format(jobNode.command))
         client = chronos.connect("stars-app.renci.org/chronos", proto="https")
-        job_name = jobNode.jobName.split("/")[-1] + "-" + jobNode.jobStoreID
-        job_name = job_name.replace("/", "-")
+        job_name = "[%s] %s" % jobNode.jobStoreID, jobNode.jobName.split("/")[-1]
+        #job_name = job_name.replace("/", "-")
         job = {
             "name": job_name,
             "command": ( # replace /path/to/_toil_worker [args] with /path/to/workerscriptlauncher [args]
@@ -47,7 +65,7 @@ class ChronosBatchSystem(BatchSystemSupport): #TODO look at how singleMachine ba
                 + " ".join(jobNode.command.split(" ")[1:]) # args after original _toil_worker
                 ),
             "owner": "nobody@domain.ext",
-            "schedule": "R//P1Y",
+            "schedule": "R1//P1Y",
             "epsilon": "PT15M",
             "execute_now": True,
             "shell": True,
@@ -60,28 +78,14 @@ class ChronosBatchSystem(BatchSystemSupport): #TODO look at how singleMachine ba
             ]
         }
         logger.info("Creating job in chronos: \n%s" % job)
-        # encode the field values
-        #for field in job:
-        #    if isinstance(job[field], basestring):
-        #        encoded_value = urllib.quote_plus(job[field])
-        #        job[field] = encoded_value
-        #logger.info("Encoded job: %s" % job)
         # TODO handle return value here
-        """j2 = {
-            "name": "asdf",
-            "command": "ls",
-            "owner": "nobody@domain.ext",
-            "schedule": "R//P1Y",
-            "epsilon": "PT15M",
-            "execute_now": True,
-            "shell": True,
-            "disabled": False,
-            "runAsUser": "evryscope"
-        }"""
+
         ret = client.add(job)
         logger.info("Chronos ret: %s" % ret)
-        #self.issued_jobs.append(job)
-        #return self.issued_jobs.index(jobs)
+        job["issued_time"] = datetime.datetime.now()
+
+        self.issued_jobs.append(job)
+        #return self.issued_jobs.index(job)
         return job["name"]
 
 
@@ -96,7 +100,7 @@ class ChronosBatchSystem(BatchSystemSupport): #TODO look at how singleMachine ba
     def getIssuedBatchJobIDs(self):
         if not self.jobStoreID:
             return []
-        client = chronos.connect("stars-app.renci.org/chronos")
+        client = chronos.connect("stars-app.renci.org/chronos", proto="https")
         jobs = client.search(name=self.jobStoreID)
         ids = [j["name"] for j in jobs]
         return ids
@@ -110,7 +114,7 @@ class ChronosBatchSystem(BatchSystemSupport): #TODO look at how singleMachine ba
     def getRunningBatchJobIDs(self):
         if not self.jobStoreID:
             return {}
-        client = chronos.connect("stars-app.renci.org/chronos")
+        client = chronos.connect("stars-app.renci.org/chronos", proto="https")
         jobs = client.search(name=self.jobStoreID)
 
         jobs_summary = client._call("/scheduler/jobs/summary")["jobs"]
@@ -119,15 +123,27 @@ class ChronosBatchSystem(BatchSystemSupport): #TODO look at how singleMachine ba
             # look for this job in the job summary list (which has the state and status fields)
             for summary in jobs_summary:
                 if summary["name"] == j["name"]:
-                    # add status field from summary to job obj
+                    # add state field from summary to job obj
                     j["status"] = summary["status"]
                     j["state"] = summary["state"]
                     if "running" in j["state"]:
-                        running_jobs[j["name"]] = 0
+                        # look up local job obj which contains the issued time and compare to now
+                        # (not the actual run time in mesos, just time since it was issued in toil)
+                        for lj in self.issued_jobs:
+                            run_seconds = 0
+                            if lj["name"] == j["name"]:
+                                run_delta = datetime.datetime.now() - lj["issued_time"]
+                                run_seconds = run_delta.total_seconds()
+                        running_jobs[j["name"]] = run_seconds
         return running_jobs
 
     def getUpdatedBatchJob(self, maxWait):
-        #TODO
+        client = chronos.connect("stars-app.renci.org/chronos", proto="https")
+        jobs = client.search(name=self.jobStoreID)
+        jobs_summary = client._call("/scheduler/jobs/summary")["jobs"]
+
+
+
         return None
 
     def shutdown(self):
