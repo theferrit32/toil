@@ -7,9 +7,12 @@ from toil.batchSystems.abstractBatchSystem import AbstractBatchSystem, BatchSyst
 import chronos
 import datetime
 from six.moves.queue import Empty, Queue
+
 logger = logging.getLogger(__name__)
 
 class ChronosBatchSystem(BatchSystemSupport):
+    #TODO look at how singleMachine batch system does clean up/shutdown
+
     @classmethod
     def supportsWorkerCleanup(cls):
         return False
@@ -22,7 +25,6 @@ class ChronosBatchSystem(BatchSystemSupport):
         #super(ChronosBatchSystem, self).__init__(config, maxCores, maxMemory, maxDisk)
         super(ChronosBatchSystem, self).__init__(config, maxCores, maxMemory, maxDisk)
         logger.info("config: {}".format(config))
-
         """
         List of jobs in format:
         {
