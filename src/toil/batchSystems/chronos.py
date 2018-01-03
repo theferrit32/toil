@@ -25,18 +25,17 @@ class ChronosBatchSystem(BatchSystemSupport):
     def __init__(self, config, maxCores, maxMemory, maxDisk):
         #super(ChronosBatchSystem, self).__init__(config, maxCores, maxMemory, maxDisk)
         super(ChronosBatchSystem, self).__init__(config, maxCores, maxMemory, maxDisk)
-        logger.info("config: {}".format(config))
+        logger.debug("config: {}".format(config))
+
         """
         List of jobs in format:
-        {
-            "name": <str>,
-            ... chronos job fields
-            "issued_time": <Date>,
-            "status": <success|failed>,
-            #"state": <idle|running|..>
-        }
+        { "name": <str>,
+           ... other chronos job fields
+          "issued_time": <issued time in seconds (Float)>,
+          "status": <fresh|success|failed> }
         """
         self.issued_jobs = []
+
         self.updated_jobs_queue = Queue()
         self.jobStoreID = None
         self.running = True
@@ -65,7 +64,7 @@ class ChronosBatchSystem(BatchSystemSupport):
                     cached_job["status"] = remote_job["status"]
 
                     proc_status = chronos_status_to_proc_status(cached_job["status"])
-                    logger.info("Job '%s' updated with status '%s'" % (job_name, cached_job["status"]))
+                    logger.info("Job '{}' updated in Chronos with status '{}'".format(job_name, cached_job["status"]))
                     self.updated_jobs_queue.put(
                         (job_name, proc_status, time.time() - cached_job["issued_time"])
                     )
@@ -81,8 +80,8 @@ class ChronosBatchSystem(BatchSystemSupport):
     def issueBatchJob(self, jobNode):
         # store jobStoreID as a way to reference this batch of jobs
         self.jobStoreID = jobNode.jobStoreID.replace("/", "-")
-        logger.info("jobNode: {}".format(vars(jobNode)))
-        logger.info("jobNode command: {}".format(jobNode.command))
+        logger.debug("issuing batch job with unique ID: {}".format(self.jobStoreID))
+        logger.debug("jobNode command: {}".format(jobNode.command))
         client = chronos.connect("stars-app.renci.org/chronos", proto="https")
 
         # if a job with this name already exists, it will be overwritten in chronos.
@@ -113,7 +112,7 @@ class ChronosBatchSystem(BatchSystemSupport):
                 ]
             ]
         }
-        logger.info("Creating job in chronos: \n%s" % job)
+        logger.debug("Creating job in chronos: \n%s" % job)
 
         # TODO is this return value relevant?
         ret = client.add(job)
@@ -186,7 +185,7 @@ class ChronosBatchSystem(BatchSystemSupport):
 
 
     def shutdown(self):
-        logger.info("shutdown called")
+        logger.debug("shutdown called")
         self.running = False
         self.worker.join()
 
