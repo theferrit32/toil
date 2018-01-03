@@ -84,8 +84,16 @@ class ChronosBatchSystem(BatchSystemSupport):
         logger.info("jobNode: {}".format(vars(jobNode)))
         logger.info("jobNode command: {}".format(jobNode.command))
         client = chronos.connect("stars-app.renci.org/chronos", proto="https")
-        job_name = "%s_%s" % (jobNode.jobStoreID, jobNode.jobName.split("/")[-1])
+
+        # if a job with this name already exists, it will be overwritten in chronos.
+        # we don't want this, so increment a unique counter on the end of it.
+        simple_jobnode_jobname = jobNode.jobName.split("/")[-1]
+        dup_job_name_counter = len(
+                [x for x in self.issued_jobs if simple_jobnode_jobname in x["name"]])
+        job_name = "{}_{}_{}".format(
+                jobNode.jobStoreID, jobNode.jobName.split("/")[-1], dup_job_name_counter)
         job_name = job_name.replace("/", "-")
+
         job = {
             "name": job_name,
             "command": ( # replace /path/to/_toil_worker [args] with /path/to/workerscriptlauncher [args]
