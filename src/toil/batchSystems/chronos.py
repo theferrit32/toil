@@ -6,6 +6,7 @@ import urllib
 from toil.batchSystems.abstractBatchSystem import AbstractBatchSystem, BatchSystemSupport
 import chronos
 import time
+import os
 from threading import Thread
 from six.moves.queue import Empty, Queue
 
@@ -27,6 +28,15 @@ class ChronosBatchSystem(BatchSystemSupport):
         super(ChronosBatchSystem, self).__init__(config, maxCores, maxMemory, maxDisk)
         logger.debug("config: {}".format(config))
 
+        self.chronos_endpoint = os.getenv("TOIL_CHRONOS_ENDPOINT")
+        self.chronos_proto = os.getenv("TOIL_CHRONOS_PROTO")
+        if self.chronos_endpoint is None:
+            raise RuntimeError(
+                "Chronos batch system requires environment variable "
+                "'TOIL_CHRONOS_ENDPOINT' to be defined.")
+        if self.chronos_proto is None:
+            self.chronos_proto = "http"
+
         """
         List of jobs in format:
         { "name": <str>,
@@ -44,7 +54,7 @@ class ChronosBatchSystem(BatchSystemSupport):
 
     def updated_job_worker(self):
         # poll chronos api and check for changed job statuses
-        client = chronos.connect("stars-app.renci.org/chronos", proto="https")
+        client = get_chronos_client(self.chronos_endpoint, self.chronos_proto)
         while self.running:
             # jobs for the job store of this batch
             remote_jobs = client.search(name=self.jobStoreID)
@@ -82,7 +92,7 @@ class ChronosBatchSystem(BatchSystemSupport):
         self.jobStoreID = jobNode.jobStoreID.replace("/", "-")
         logger.debug("issuing batch job with unique ID: {}".format(self.jobStoreID))
         logger.debug("jobNode command: {}".format(jobNode.command))
-        client = chronos.connect("stars-app.renci.org/chronos", proto="https")
+        client = get_chronos_client(self.chronos_endpoint, self.chronos_proto)
 
         # if a job with this name already exists, it will be overwritten in chronos.
         # we don't want this, so increment a unique counter on the end of it.
@@ -124,9 +134,16 @@ class ChronosBatchSystem(BatchSystemSupport):
         return job["name"]
 
 
+    """
+    Kill the tasks for a list of jobs in chronos, and delete the jobs in chronos
+    """
     def killBatchJobs(self, jobIDs):
-        # TODO
-        pass
+        client = get_chronos_client(self.chronos_endpoint, self.chronos_proto)
+        for jobID in jobIDs:
+            client.delete_tasks(jobID)
+            client.delete(jobID)
+            logger.info("Removed job '{}' from chronos.".format(jobID))
+
 
     """
     Currently returning the string name of the jobs as the ids, not int ids
@@ -135,21 +152,18 @@ class ChronosBatchSystem(BatchSystemSupport):
     def getIssuedBatchJobIDs(self):
         if not self.jobStoreID:
             return []
-        client = chronos.connect("stars-app.renci.org/chronos", proto="https")
+        client = get_chronos_client(self.chronos_endpoint, self.chronos_proto)
         jobs = client.search(name=self.jobStoreID)
         ids = [j["name"] for j in jobs]
         return ids
 
     """
-    Returns {<jobname>: 0, ...}
-    # TODO fill in the 0 with the number of seconds the job has been running.
-    Requires interacting with the Mesos API, somewhere in here:
-        http://mesos.apache.org/documentation/latest/endpoints/
+    Returns {<jobname(str)>: <seconds(int)>, ...}
     """
     def getRunningBatchJobIDs(self):
         if not self.jobStoreID:
             return {}
-        client = chronos.connect("stars-app.renci.org/chronos", proto="https")
+        client = get_chronos_client(self.chronos_endpoint, self.chronos_proto)
         jobs = client.search(name=self.jobStoreID)
 
         jobs_summary = client._call("/scheduler/jobs/summary")["jobs"]
@@ -171,7 +185,10 @@ class ChronosBatchSystem(BatchSystemSupport):
                         running_jobs[j["name"]] = run_seconds
         return running_jobs
 
-
+    """
+    Returns the most recently updated job. Waits up to maxWait for a job to be marked as updated.
+    The worker thread marks a job as updated when its status changes in Chronos.
+    """
     def getUpdatedBatchJob(self, maxWait):
         while True:
             try:
@@ -199,6 +216,9 @@ class ChronosBatchSystem(BatchSystemSupport):
     def setOptions(cls, setOption):
         pass
 
+def get_chronos_client(endpoint, proto):
+    client = chronos.connect(endpoint, proto=proto)
+    return client
 
 def chronos_status_to_proc_status(status):
     if not status or status == "failure":
