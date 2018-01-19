@@ -115,12 +115,6 @@ class ChronosBatchSystem(BatchSystemSupport):
             "execute_now": True,
             "shell": True,
             "disabled": False,
-            "runAsUser": "evryscope",
-        #    "constraints": [
-        #        [
-        #            "hostname", "EQUALS", "stars-dw0.edc.renci.org"
-        #        ]
-        #    ]
         }
         logger.debug("Creating job in chronos: \n%s" % job)
 
