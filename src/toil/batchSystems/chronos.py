@@ -111,7 +111,7 @@ class ChronosBatchSystem(BatchSystemSupport):
             "name": job_name,
             "command": ( # replace /path/to/_toil_worker [args] with /path/to/workerscriptlauncher [args]
                 #"/opt/toil/_toil_worker.sh " # toil requires worker process to have "_toil_worker" in it
-                "sudo docker run --privileged -e \"IRODS_PASSWORD={}\" -e \"TOIL_SHARED_FILESYSTEM_PASSWORD={}\" heliumdatacommons/datacommons-toil _toil_worker ".format(self.shared_filesystem_password, self.shared_filesystem_password)
+                "sudo docker run --privileged -e IRODS_PASSWORD={} heliumdatacommons/datacommons-toil _toil_worker ".format(self.shared_filesystem_password)
                 + " ".join(jobNode.command.split(" ")[1:]) # args after original _toil_worker
                 ),
             "owner": "nobody@domain.ext",
@@ -121,7 +121,7 @@ class ChronosBatchSystem(BatchSystemSupport):
             "shell": True,
             "disabled": False,
         }
-        logger.debug("Creating job in chronos: \n%s" % job)
+        logger.info("Creating job in chronos: \n%s" % job)
 
         # TODO is this return value relevant?
         ret = client.add(job)
