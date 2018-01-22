@@ -59,6 +59,8 @@ class ChronosBatchSystem(BatchSystemSupport):
     def updated_job_worker(self):
         # poll chronos api and check for changed job statuses
         client = get_chronos_client(self.chronos_endpoint, self.chronos_proto)
+        not_found_counts = {}
+        not_found_fail_threshold = 5 # how many times to allow a job to not be found
         while self.running:
             # jobs for the job store of this batch
             remote_jobs = client.search(name=self.jobStoreID)
@@ -73,7 +75,14 @@ class ChronosBatchSystem(BatchSystemSupport):
                         remote_job = j
                 if not remote_job:
                     logger.error("Job '%s' not found in chronos" % job_name)
-                    return
+                    if job_name not in not_found_counts: not_found_counts[job_name] = 0
+                    not_found_counts[job_name] += 1
+                    if not_found_counts[job_name] > not_found_fail_threshold:
+                        raise RuntimeError(
+                            "Chronos job not found during {} poll iterations".format(
+                                not_found_fail_threshold))
+                    else:
+                        continue #if not found, could be race condition with chronos REST API job adding
                 if remote_job["status"] != cached_job["status"]:
                     cached_job["status"] = remote_job["status"]
 
