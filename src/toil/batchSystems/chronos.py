@@ -30,12 +30,16 @@ class ChronosBatchSystem(BatchSystemSupport):
 
         self.chronos_endpoint = os.getenv("TOIL_CHRONOS_ENDPOINT")
         self.chronos_proto = os.getenv("TOIL_CHRONOS_PROTO")
+        self.shared_filesystem_password = os.getenv("TOIL_SHARED_FILESYSTEM_PASSWORD")
         if self.chronos_endpoint is None:
             raise RuntimeError(
                 "Chronos batch system requires environment variable "
                 "'TOIL_CHRONOS_ENDPOINT' to be defined.")
         if self.chronos_proto is None:
             self.chronos_proto = "http"
+        if self.shared_filesystem_password is None:
+            raise RuntimeError(
+                "Chronos batch system requires a password for shared filesystem")
 
         """
         List of jobs in format:
@@ -106,7 +110,8 @@ class ChronosBatchSystem(BatchSystemSupport):
         job = {
             "name": job_name,
             "command": ( # replace /path/to/_toil_worker [args] with /path/to/workerscriptlauncher [args]
-                "/opt/toil/_toil_worker.sh "
+                #"/opt/toil/_toil_worker.sh " # toil requires worker process to have "_toil_worker" in it
+                "sudo docker run --privileged -e \"IRODS_PASSWORD={}\" -e \"TOIL_SHARED_FILESYSTEM_PASSWORD={}\" heliumdatacommons/datacommons-toil _toil_worker ".format(self.shared_filesystem_password, self.shared_filesystem_password)
                 + " ".join(jobNode.command.split(" ")[1:]) # args after original _toil_worker
                 ),
             "owner": "nobody@domain.ext",
