@@ -954,7 +954,7 @@ def main(args=None, stdout=sys.stdout):
             wf1.cwljob = job
             print("toil: {}".format(vars(toil)))
             print("toil config: {}".format(vars(toil.config)))
-            print("wf1: {}".format(vars(wf1)))
+            #print("wf1: {}".format(vars(wf1)))
             outobj = toil.start(wf1)
 
         outobj = resolve_indirect(outobj)
