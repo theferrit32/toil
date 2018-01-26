@@ -91,7 +91,7 @@ class ChronosBatchSystem(BatchSystemSupport):
                     self.updated_jobs_queue.put(
                         (job_name, proc_status, time.time() - cached_job["issued_time"])
                     )
-            time.sleep(2)
+            time.sleep(3)
 
     def setUserScript(self, userScript):
         raise NotImplementedError()
