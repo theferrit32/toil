@@ -100,7 +100,7 @@ class Config(object):
         self.preemptableCompensation = 0.0
         self.nodeStorage = 50
         self.metrics = False
-        
+
         # Parameters to limit service jobs, so preventing deadlock scheduling scenarios
         self.maxPreemptableServiceJobs = sys.maxsize
         self.maxServiceJobs = sys.maxsize
@@ -183,6 +183,7 @@ class Config(object):
 
         #Core options
         setOption("jobStore", parsingFn=parseJobStore)
+        setOption("jobStoreClean")
         #TODO: LOG LEVEL STRING
         setOption("workDir")
         if self.workDir is not None:
@@ -380,7 +381,7 @@ def _addOptions(addGroupFn, config):
                       "depends on the provisioner used. Neither the CGCloud nor the AWS "
                       "provisioner support any node options.")
 
-    addOptionFn('--minNodes', default=None, 
+    addOptionFn('--minNodes', default=None,
                  help="Mininum number of nodes of each type in the cluster, if using "
                               "auto-scaling. This should be provided as a comma-separated "
                               "list of the same length as the list of node types. default=0")
@@ -422,8 +423,8 @@ def _addOptions(addGroupFn, config):
                 default=False, action="store_true",
                 help=("Enable the prometheus/grafana dashboard for monitoring CPU/RAM usage, queue size, "
                       "and issued jobs."))
-    
-    #        
+
+    #
     # Parameters to limit service jobs / detect service deadlocks
     #
     addOptionFn = addGroupFn("toil options for limiting the number of service jobs and detecting service deadlocks",
@@ -571,15 +572,15 @@ def addOptions(parser, config=Config()):
 def getNodeID(extraIDFiles=None):
     """
     Return unique ID of the current node (host).
-    Tries several methods until success. The returned ID should be identical across calls from different processes on 
+    Tries several methods until success. The returned ID should be identical across calls from different processes on
     the same node at least until the next OS reboot.
 
     The last resort method is uuid.getnode() that in some rare OS configurations may return a random ID each time it is
-    called. However, this method should never be reached on a Linux system, because reading from 
+    called. However, this method should never be reached on a Linux system, because reading from
     /proc/sys/kernel/random/boot_id will be tried prior to that. If uuid.getnode() is reached, it will be called twice,
     and exception raised if the values are not identical.
 
-    :param list extraIDFiles: Optional list of additional file names to try reading node ID before trying default 
+    :param list extraIDFiles: Optional list of additional file names to try reading node ID before trying default
     methods. ID should be a single word (no spaces) on the first line of the file.
     """
     if extraIDFiles is None:
@@ -667,6 +668,15 @@ class Toil(object):
         config = Config()
         config.setOptions(self.options)
         jobStore = self.getJobStore(config.jobStore)
+        if config.jobStoreClean:
+            if config.restart:
+                raise RuntimeError("Cannot use --restart when --jobStoreClean is also enabled")
+            from toil.jobStores.abstractJobStore import NoSuchJobStoreException
+            try:
+                jobStore.resume()
+                jobStore.destroy()
+            except NoSuchJobStoreException as e:
+                pass # suppress error when jobStoreClean used on non-existent jobStore
         if not config.restart:
             config.workflowAttemptNumber = 0
             jobStore.initialize(config)
