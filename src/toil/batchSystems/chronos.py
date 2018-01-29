@@ -101,6 +101,7 @@ class ChronosBatchSystem(BatchSystemSupport):
     Currently returning the string name of the chronos job instead of an int id
     """
     def issueBatchJob(self, jobNode):
+        logger.info("jobNode: " + str(vars(jobNode)))
         # store jobStoreID as a way to reference this batch of jobs
         self.jobStoreID = jobNode.jobStoreID.replace("/", "-")
         logger.debug("issuing batch job with unique ID: {}".format(self.jobStoreID))

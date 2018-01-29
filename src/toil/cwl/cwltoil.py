@@ -890,6 +890,7 @@ def main(args=None, stdout=sys.stdout):
     # Will override the "jobStore" positional argument, enables
     # user to select jobStore or get a default from logic one below.
     parser.add_argument("--jobStore", type=str)
+    parser.add_argument("--jobStoreClean", action="store_true")
     parser.add_argument("--not-strict", action="store_true")
     parser.add_argument("--quiet", dest="logLevel", action="store_const", const="ERROR")
     parser.add_argument("--basedir", type=str)
@@ -978,7 +979,7 @@ def main(args=None, stdout=sys.stdout):
                                                 kwargs=make_tool_kwargs,
                                                 resolver=cwltool.resolver.tool_resolver,
                                                 strict=useStrict)
-                #print("tool: {}".format(vars(t)))
+
                 unsupportedRequirementsCheck(t.requirements)
             except cwltool.process.UnsupportedRequirement as e:
                 logging.error(e)
