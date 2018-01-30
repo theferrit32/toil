@@ -675,7 +675,7 @@ class Toil(object):
             try:
                 jobStore.resume()
                 jobStore.destroy()
-            except NoSuchJobStoreException as e:
+            except Exception as e:
                 pass # suppress error when jobStoreClean used on non-existent jobStore
         if not config.restart:
             config.workflowAttemptNumber = 0
