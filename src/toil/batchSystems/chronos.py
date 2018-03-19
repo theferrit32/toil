@@ -9,7 +9,7 @@ import time
 import os
 from threading import Thread
 from six.moves.queue import Empty, Queue
-
+from six.moves.urllib.parse import urlparse
 logger = logging.getLogger(__name__)
 
 class ChronosBatchSystem(BatchSystemSupport):
@@ -27,10 +27,19 @@ class ChronosBatchSystem(BatchSystemSupport):
         #super(ChronosBatchSystem, self).__init__(config, maxCores, maxMemory, maxDisk)
         super(ChronosBatchSystem, self).__init__(config, maxCores, maxMemory, maxDisk)
         logger.debug("config: {}".format(config))
-
-        self.chronos_endpoint = os.getenv("TOIL_CHRONOS_ENDPOINT")
-        self.chronos_proto = os.getenv("TOIL_CHRONOS_PROTO")
-        self.shared_filesystem_password = os.getenv("TOIL_SHARED_FILESYSTEM_PASSWORD")
+        c = os.getenv("CHRONOS_URL")
+        if not c:
+            raise RuntimeError("Chronos batch system requires CHRONOS_URL to be set")
+        urlp = urlparse(c)
+        if urlp.scheme:
+            self.chronos_proto = urlp.scheme
+            self.chronos_endpoint = c[len(urlp.scheme) + 3:]
+        else:
+            self.chronos_proto = "https"
+            self.chronos_endpoint = c
+        print("proto: " + str(self.chronos_proto))
+        print("endpoint: " + str(self.chronos_endpoint))
+        self.shared_filesystem_password = os.getenv("IRODS_PASSWORD")
         if self.chronos_endpoint is None:
             raise RuntimeError(
                 "Chronos batch system requires environment variable "
