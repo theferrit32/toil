@@ -8,6 +8,7 @@ import chronos
 import time
 import os
 from threading import Thread
+import six
 from six.moves.queue import Empty, Queue
 from six.moves.urllib.parse import urlparse
 logger = logging.getLogger(__name__)
