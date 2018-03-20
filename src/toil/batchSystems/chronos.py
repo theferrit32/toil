@@ -37,8 +37,8 @@ class ChronosBatchSystem(BatchSystemSupport):
         else:
             self.chronos_proto = "https"
             self.chronos_endpoint = c
-        print("proto: " + str(self.chronos_proto))
-        print("endpoint: " + str(self.chronos_endpoint))
+        #print("proto: " + str(self.chronos_proto))
+        #print("endpoint: " + str(self.chronos_endpoint))
         self.shared_filesystem_password = os.getenv("IRODS_PASSWORD")
         if self.chronos_endpoint is None:
             raise RuntimeError(
@@ -126,12 +126,18 @@ class ChronosBatchSystem(BatchSystemSupport):
                 jobNode.jobStoreID, jobNode.jobName.split("/")[-1], dup_job_name_counter)
         job_name = job_name.replace("/", "-")
 
+        # all environment variables in this context that start with IRODS_ will be passed to worker containers
+        env_str = ""
+        for k,v in six.iteritems(os.environ):
+            if k.startswith("IRODS_"):
+                env_str += "-e {}='{}' ".format(k,v)
+
         job = {
             "name": job_name,
             "command": ( # replace /path/to/_toil_worker [args] with /path/to/workerscriptlauncher [args]
                 #"/opt/toil/_toil_worker.sh " # toil requires worker process to have "_toil_worker" in it
-                "sudo docker run --privileged -e IRODS_PASSWORD={} heliumdatacommons/datacommons-toil _toil_worker ".format(self.shared_filesystem_password)
-                + " ".join(jobNode.command.split(" ")[1:]) # args after original _toil_worker
+                "sudo docker run --privileged {} heliumdatacommons/datacommons-base _toil_worker ".format(env_str)
+                    + " ".join(jobNode.command.split(" ")[1:]) # args after original _toil_worker
                 ),
             "owner": "nobody@domain.ext",
             "schedule": "R1//P1Y",
