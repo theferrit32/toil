@@ -72,13 +72,15 @@ class ChronosBatchSystem(BatchSystemSupport):
         not_found_counts = {}
         not_found_fail_threshold = 5 # how many times to allow a job to not be found
         while self.running:
+            logger.info("Checking job summary in Chronos")
             # jobs for the job store of this batch
-            remote_jobs = client.search(name=self.jobStoreID)
+            #remote_jobs = client.search(name=self.jobStoreID)
             # job summary info, contains status for jobs, which we need
             remote_jobs_summary = client._call("/scheduler/jobs/summary")["jobs"]
 
             for cached_job in self.issued_jobs:
                 job_name = cached_job["name"]
+                logger.info("Checking status of job '%s'" % job_name)
                 remote_job = None
                 for j in remote_jobs_summary:
                     if j["name"] == job_name:
@@ -101,7 +103,7 @@ class ChronosBatchSystem(BatchSystemSupport):
                     self.updated_jobs_queue.put(
                         (job_name, proc_status, time.time() - cached_job["issued_time"])
                     )
-            time.sleep(3)
+            time.sleep(1)
 
     def setUserScript(self, userScript):
         raise NotImplementedError()
