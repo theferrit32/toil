@@ -18,7 +18,7 @@ def _gridengineBatchSystemFactory():
 
 def _chronosBatchSystemFactory():
     from toil.batchSystems.chronos import ChronosBatchSystem
-return ChronosBatchSystem
+    return ChronosBatchSystem
 
 def _parasolBatchSystemFactory():
     from toil.batchSystems.parasol import ParasolBatchSystem
