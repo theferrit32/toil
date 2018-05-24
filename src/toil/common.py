@@ -671,9 +671,8 @@ class Toil(object):
         if config.jobStoreClean:
             if config.restart:
                 raise RuntimeError("Cannot use --restart when --jobStoreClean is also enabled")
-            from toil.jobStores.abstractJobStore import NoSuchJobStoreException
+            #from toil.jobStores.abstractJobStore import NoSuchJobStoreException
             try:
-                jobStore.resume()
                 jobStore.destroy()
             except Exception as e:
                 pass # suppress error when jobStoreClean used on non-existent jobStore
