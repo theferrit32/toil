@@ -156,6 +156,7 @@ class ChronosBatchSystem(BatchSystemSupport):
                     { "key": "privileged", "value": True}
                 ]
             },
+            "command": "",
             "arguments": [
                 "_toil_worker"
             ] + jobNode.command.split(" ")[1:],
