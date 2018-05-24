@@ -154,12 +154,13 @@ class ChronosBatchSystem(BatchSystemSupport):
 #            "environmentVariables": [
 #                {"name":k, "value":v} for k,v in six.iteritems(os.environ) if k.startswith("IRODS_")
 #           ],
-            "command": 
-                "sudo docker run --privileged {} heliumdatacommons/datacommons-base _toil_worker {}".format(
+            "command": ( 
+                "sudo docker pull heliumdatacommons/datacommons-base;"
+                + "sudo docker run --privileged {} heliumdatacommons/datacommons-base _toil_worker '{}'".format(
                         env_str, # aggregated environment vars
                         " ".join(jobNode.command.split(" ")[1:])
                     ) # args after original _toil_worker
-                ,
+            ),
             "owner": "nobody@domain.ext",
             "schedule": "R1//P1Y",
             "epsilon": "PT15M",
@@ -168,7 +169,8 @@ class ChronosBatchSystem(BatchSystemSupport):
             "disabled": False,
             #"cpus": 1,
             "mem": 2048,
-            "disk": 5024
+            "disk": 5024,
+            "constraints": [["hostname", "EQUALS", "stars-dw0.edc.renci.org"]]
         }
         logger.info("Creating job in chronos: \n%s" % job)
 
