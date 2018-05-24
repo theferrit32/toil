@@ -138,8 +138,8 @@ class ChronosBatchSystem(BatchSystemSupport):
             "command": ( # replace /path/to/_toil_worker [args] with /path/to/workerscriptlauncher [args]
                 #"/opt/toil/_toil_worker.sh " # toil requires worker process to have "_toil_worker" in it
                 "sudo docker run --privileged {} heliumdatacommons/datacommons-base _toil_worker '{}'".format(
-                    env_str)
-                    " ".join(jobNode.command.split(" ")[1:]) # args after original _toil_worker
+                        env_str, # aggregated environment vars
+                        " ".join(jobNode.command.split(" ")[1:])) # args after original _toil_worker
                 ),
             "owner": "nobody@domain.ext",
             "schedule": "R1//P1Y",
