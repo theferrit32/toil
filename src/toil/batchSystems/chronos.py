@@ -150,25 +150,26 @@ class ChronosBatchSystem(BatchSystemSupport):
                     { "key": "privileged", "value": True}
                 ]
             },
-            "command": "",
-            "arguments": [
-                "_toil_worker"
-            ] + jobNode.command.split(" ")[1:],
-            "environmentVariables": {
-                k:v for k,v in six.iteritems(os.environ) if k.startswith("IRODS_")
-            },
+            "command": "_toil_worker " + " ".join(jobNode.command.split(" ")[1:]),
+            "environmentVariables": [
+                {"Name":k, "value":v} for k,v in six.iteritems(os.environ) if k.startswith("IRODS_")
+            ],
             "owner": "nobody@domain.ext",
             "schedule": "R1//P1Y",
             "epsilon": "PT15M",
             "execute_now": True,
             "shell": True,
             "disabled": False,
+             "cpus": 1,
+            "mem": 2048,
+            "disk": 5024
         }
         logger.info("Creating job in chronos: \n%s" % job)
 
         # TODO is this return value relevant?
+        #equests.post('')
         ret = client.add(job)
-
+        print(str(ret))
         job["issued_time"] = time.time()
         job["status"] = "fresh" # corresponds to status in chronos for jobs that have not yet run
         self.issued_jobs.append(job)
