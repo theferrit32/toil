@@ -23,6 +23,10 @@ class ChronosBatchSystem(BatchSystemSupport):
     @classmethod
     def supportsHotDeployment(cls):
         return False
+    
+    @classmethod
+    def supportsAutoDeployment(cls):
+        return False
 
     def __init__(self, config, maxCores, maxMemory, maxDisk):
         #super(ChronosBatchSystem, self).__init__(config, maxCores, maxMemory, maxDisk)
