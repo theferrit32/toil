@@ -141,26 +141,32 @@ class ChronosBatchSystem(BatchSystemSupport):
 
         job = {
             "name": job_name,
-            "container": {
-                "type": "DOCKER",
-                "image": "heliumdatacommons/datacommons-base",
-                "network": "BRIDGE",
-                "forcePullImage": True,
-                "parameters": [
-                    { "key": "privileged", "value": True}
-                ]
-            },
-            "command": "_toil_worker " + " ".join(jobNode.command.split(" ")[1:]),
-            "environmentVariables": [
-                {"Name":k, "value":v} for k,v in six.iteritems(os.environ) if k.startswith("IRODS_")
-            ],
+#            "container": {
+#                "type": "DOCKER",
+#                "image": "heliumdatacommons/datacommons-base",
+#                "network": "BRIDGE",
+#                "forcePullImage": True,
+#                "parameters": [
+#                    { "key": "privileged", "value": True}
+#                ]
+#           },
+#            "command": "_toil_worker " + " ".join(jobNode.command.split(" ")[1:]),
+#            "environmentVariables": [
+#                {"name":k, "value":v} for k,v in six.iteritems(os.environ) if k.startswith("IRODS_")
+#           ],
+            "command": 
+                "sudo docker run --privileged {} heliumdatacommons/datacommons-base _toil_worker {}".format(
+                        env_str, # aggregated environment vars
+                        " ".join(jobNode.command.split(" ")[1:])
+                    ) # args after original _toil_worker
+                ,
             "owner": "nobody@domain.ext",
             "schedule": "R1//P1Y",
             "epsilon": "PT15M",
             "execute_now": True,
             "shell": True,
             "disabled": False,
-             "cpus": 1,
+            #"cpus": 1,
             "mem": 2048,
             "disk": 5024
         }

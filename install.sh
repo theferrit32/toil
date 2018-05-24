@@ -9,4 +9,4 @@ pip install chronos-python
 pip install -e .[cwl,mesos,aws]
 
 sudo ln -s $(pwd)/_toil_worker.sh /usr/bin/_toil_worker
-
+sudo chmod +x /usr/bin/_toil_worker
