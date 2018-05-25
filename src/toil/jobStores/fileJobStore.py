@@ -315,6 +315,9 @@ class FileJobStore(AbstractJobStore):
         localDirPath = os.path.dirname(localFilePath)
         # If local file would end up on same file system as the one hosting this job store ...
         if os.stat(jobStoreFilePath).st_dev == os.stat(localDirPath).st_dev:
+            # TODO ALWAYS COPY, NO LINK
+            shutil.copyfile(jobStoreFilePath, localFilePath)
+            return
             # ... we can hard-link the file, ...
             if symlink:
                 try:
