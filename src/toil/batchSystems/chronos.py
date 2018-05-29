@@ -169,8 +169,7 @@ class ChronosBatchSystem(BatchSystemSupport):
             "disabled": False,
             #"cpus": 1,
             "mem": 2048,
-            "disk": 5024,
-            "constraints": [["hostname", "EQUALS", "stars-dw0.edc.renci.org"]]
+            "disk": 5024
         }
         logger.info("Creating job in chronos: \n%s" % job)
 
