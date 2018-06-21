@@ -123,7 +123,10 @@ class ChronosBatchSystem(BatchSystemSupport):
         logger.debug("issuing batch job with unique ID: {}".format(self.jobStoreID))
         logger.debug("jobNode command: {}".format(jobNode.command))
         client = get_chronos_client(self.chronos_endpoint, self.chronos_proto)
-
+        mem = jobNode.memory / 2**20 # B -> MiB
+        cpus = jobNode.cores
+        disk = jobNode.disk / 2**20 # B -> MiB
+        logger.info("Requesting resources: mem={}, cpus={}, disk={}".format(mem, cpus, disk))
         # if a job with this name already exists, it will be overwritten in chronos.
         # we don't want this, so increment a unique counter on the end of it.
         simple_jobnode_jobname = jobNode.jobName.split("/")[-1]
@@ -138,38 +141,37 @@ class ChronosBatchSystem(BatchSystemSupport):
         for k,v in six.iteritems(os.environ):
             if k.startswith("IRODS_"):
                 env_str += "-e {}='{}' ".format(k,v)
-
+    
         job = {
             "name": job_name,
-#            "container": {
-#                "type": "DOCKER",
-#                "image": "heliumdatacommons/datacommons-base",
-#                "network": "BRIDGE",
-#                "forcePullImage": True,
-#                "parameters": [
-#                    { "key": "privileged", "value": True}
-#                ]
-#           },
-#            "command": "_toil_worker " + " ".join(jobNode.command.split(" ")[1:]),
-#            "environmentVariables": [
-#                {"name":k, "value":v} for k,v in six.iteritems(os.environ) if k.startswith("IRODS_")
-#           ],
-            "command": ( 
-                "sudo docker pull heliumdatacommons/datacommons-base;"
-                + "sudo docker run --privileged {} heliumdatacommons/datacommons-base _toil_worker '{}'".format(
-                        env_str, # aggregated environment vars
-                        " ".join(jobNode.command.split(" ")[1:])
-                    ) # args after original _toil_worker
-            ),
-            "owner": "nobody@domain.ext",
+            "container": {
+                "type": "DOCKER",
+                "image": "heliumdatacommons/datacommons-base",
+                "network": "BRIDGE",
+                "forcePullImage": True,
+                "parameters": [
+                    { "key": "privileged", "value": True}
+                ]
+            },
+            "command": "_toil_worker " + " ".join(jobNode.command.split(" ")[1:]),
+            "environmentVariables": [
+                {"name":str(k), "value":str(v)} for k,v in six.iteritems(os.environ) if k.startswith("IRODS_")
+            ],
+            "arguments": [],
+#            "command": (
+#                "sudo docker pull heliumdatacommons/datacommons-base;"
+#                + "sudo docker run --privileged {} heliumdatacommons/datacommons-base _toil_worker '{}'".format(
+#                        env_str, # aggregated environment vars
+#                        " ".join(jobNode.command.split(" ")[1:])
+#                    ) # args after original _toil_worker
+#            ),
             "schedule": "R1//P1Y",
-            "epsilon": "PT15M",
+#            "epsilon": "PT15M",
             "execute_now": True,
             "shell": True,
-            "disabled": False,
-            #"cpus": 1,
-            "mem": 2048,
-            "disk": 5024
+            "cpus": cpus,
+            "mem": mem,
+            "disk": disk
         }
         logger.info("Creating job in chronos: \n%s" % job)
 
