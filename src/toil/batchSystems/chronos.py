@@ -165,6 +165,8 @@ class ChronosBatchSystem(BatchSystemSupport):
 #                        " ".join(jobNode.command.split(" ")[1:])
 #                    ) # args after original _toil_worker
 #            ),
+            "owner": "",
+            "disabled": False,
             "schedule": "R1//P1Y",
 #            "epsilon": "PT15M",
             "execute_now": True,
