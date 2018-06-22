@@ -154,9 +154,9 @@ class ChronosBatchSystem(BatchSystemSupport):
  #               ]
  #           },
 #            "command": "_toil_worker " + " ".join(jobNode.command.split(" ")[1:]),
-            "environmentVariables": [
-                {"name":str(k), "value":str(v)} for k,v in six.iteritems(os.environ) if k.startswith("IRODS_")
-            ],
+#            "environmentVariables": [
+#                {"name":str(k), "value":str(v)} for k,v in six.iteritems(os.environ) if k.startswith("IRODS_")
+#            ],
             "arguments": [],
             "command": (
                 "sudo docker pull heliumdatacommons/datacommons-base;"
