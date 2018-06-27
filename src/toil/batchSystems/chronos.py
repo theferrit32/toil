@@ -165,7 +165,7 @@ class ChronosBatchSystem(BatchSystemSupport):
                         " ".join(jobNode.command.split(" ")[1:])
                     ) # args after original _toil_worker
             ),
-            "contraints": [["hostname", "EQUALS", "stars-dw0.edc.renci.org"]],
+            "constraints": [["hostname", "EQUALS", "stars-dw0.edc.renci.org"]],
             "owner": "",
             "disabled": False,
             "schedule": "R1//P1Y",
