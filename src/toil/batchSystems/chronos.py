@@ -9,6 +9,7 @@ import time
 import os
 from threading import Thread
 import six
+import copy
 from six.moves.queue import Empty, Queue
 from six.moves.urllib.parse import urlparse
 logger = logging.getLogger(__name__)
@@ -76,13 +77,13 @@ class ChronosBatchSystem(BatchSystemSupport):
         not_found_counts = {}
         not_found_fail_threshold = 5 # how many times to allow a job to not be found
         while self.running:
-            logger.info("Checking job summary in Chronos")
+            #logger.info("Checking job summary in Chronos")
             # jobs for the job store of this batch
             #remote_jobs = client.search(name=self.jobStoreID)
             # job summary info, contains status for jobs, which we need
             remote_jobs_summary = client._call("/scheduler/jobs/summary")["jobs"]
 
-            for cached_job in self.issued_jobs:
+            for cached_job in copy.copy(self.issued_jobs):
                 job_name = cached_job["name"]
                 logger.info("Checking status of job '%s'" % job_name)
                 remote_job = None
@@ -107,6 +108,11 @@ class ChronosBatchSystem(BatchSystemSupport):
                     self.updated_jobs_queue.put(
                         (job_name, proc_status, time.time() - cached_job["issued_time"])
                     )
+                    # job is no longer "issued" if it has completed with success or failure
+                    logger.debug(str(remote_job))
+                    if remote_job["status"] in ["failure", "success"]:
+                        self.issued_jobs.delete(cached_job)
+
             time.sleep(3)
 
     def setUserScript(self, userScript):
@@ -200,17 +206,21 @@ class ChronosBatchSystem(BatchSystemSupport):
             logger.info("Removed job '{}' from chronos.".format(jobID))
 
 
+
     """
     Currently returning the string name of the jobs as the ids, not int ids
     Matches ids from issueBatchJob
     """
     def getIssuedBatchJobIDs(self):
+        """
         if not self.jobStoreID:
             return []
         client = get_chronos_client(self.chronos_endpoint, self.chronos_proto)
         jobs = client.search(name=self.jobStoreID)
         ids = [j["name"] for j in jobs]
         return ids
+        """
+        return [j["name"] for j in self.issued_jobs]
 
     """
     Returns {<jobname(str)>: <seconds(int)>, ...}
@@ -250,6 +260,8 @@ class ChronosBatchSystem(BatchSystemSupport):
                 job_id, status, wallTime = self.updated_jobs_queue.get(timeout=maxWait)
             except Empty:
                 return None
+            try:
+
 
             return job_id, status, wallTime
 
