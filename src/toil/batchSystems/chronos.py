@@ -260,13 +260,10 @@ class ChronosBatchSystem(BatchSystemSupport):
                 job_id, status, wallTime = self.updated_jobs_queue.get(timeout=maxWait)
             except Empty:
                 return None
-            try:
-
 
             return job_id, status, wallTime
 
         return None
-
 
     def shutdown(self):
         logger.debug("shutdown called")
@@ -292,4 +289,3 @@ def chronos_status_to_proc_status(status):
         return 1
     else:
         return 0
-
