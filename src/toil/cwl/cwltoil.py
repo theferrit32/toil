@@ -433,6 +433,7 @@ class CWLJob(Job):
         os.environ["TMPDIR"] = os.path.realpath(opts.pop("tmpdir", None) or fileStore.getLocalTempDir())
         outdir = os.path.join(fileStore.getLocalTempDir(), "out")
         os.mkdir(outdir)
+        os.chmod(outdir, 0o777)
         tmp_outdir_prefix = os.path.join(opts.pop("workdir", None) or os.environ["TMPDIR"], "out_tmpdir")
 
         index = {}
