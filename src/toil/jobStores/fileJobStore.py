@@ -70,12 +70,14 @@ class FileJobStore(AbstractJobStore):
     def initialize(self, config):
         try:
             os.mkdir(self.jobStoreDir)
+            os.chmod(self.jobStoreDir, 0o777)
         except OSError as e:
             if e.errno == errno.EEXIST:
                 raise JobStoreExistsException(self.jobStoreDir)
             else:
                 raise
         os.mkdir(self.tempFilesDir)
+        os.chmod(self.tempFilesDir, 0o777)
         self.linkImports = config.linkImports
         super(FileJobStore, self).initialize(config)
 
