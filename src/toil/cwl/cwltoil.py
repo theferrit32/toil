@@ -447,7 +447,6 @@ class CWLJob(Job):
                                                             tmpdir_prefix=fileStore.getLocalTempDir(),
                                                             make_fs_access=functools.partial(ToilFsAccess, fileStore=fileStore),
                                                             toil_get_file=functools.partial(toilGetFile, fileStore, index, existing),
-                                                            no_match_user=False,
                                                             **opts)
         if status != "success":
             raise cwltool.errors.WorkflowException(status)
@@ -836,7 +835,8 @@ def main(args=None, stdout=sys.stdout):
     parser.add_argument("--beta-use-biocontainers", default=None, action="store_true")
     # help="Short cut to use Conda to resolve 'SoftwareRequirement' packages."
     parser.add_argument("--beta-conda-dependencies", default=None, action="store_true")
-
+    parser.add_argument("--no-match-user", action="store_true", default=False,
+                        help="Disable passing the current uid to 'docker run --user`")
     # mkdtemp actually creates the directory, but
     # toil requires that the directory not exist,
     # so make it and delete it and allow
@@ -948,7 +948,8 @@ def main(args=None, stdout=sys.stdout):
                 (wf1, wf2) = makeJob(t, {}, use_container=use_container,
                                      preserve_environment=options.preserve_environment,
                                      tmpdir=os.path.realpath(outdir), workdir=options.workDir,
-                                     job_script_provider=job_script_provider)
+                                     job_script_provider=job_script_provider,
+                                     no_match_user=options.no_match_user)
             except cwltool.process.UnsupportedRequirement as e:
                 logging.error(e)
                 return 33
