@@ -403,12 +403,20 @@ class FileStore(with_metaclass(ABCMeta, object)):
         :return: True/False
         :rtype: bool
         """
+        import sys, os, subprocess
+        print("_pidExists, my pid: {}".format(str(os.getpid())))
+        print("_pidExists, job pid: {}".format(str(pid)))
+        print("_pidExists, my sys.argv: {}".format(str(sys.argv)))
+        os.system("ps -ef | grep {}".format(pid))
         assert pid > 0
         try:
             os.kill(pid, 0)
         except OSError as err:
             if err.errno == errno.ESRCH:
                 # ESRCH == No such process
+                return False
+            elif err.errno == errno.EPERM:
+                # EPERM == No permission
                 return False
             else:
                 raise
