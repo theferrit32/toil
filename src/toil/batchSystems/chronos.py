@@ -188,7 +188,7 @@ class ChronosBatchSystem(BatchSystemSupport):
             "shell": True,
             "cpus": cpus,
             "mem": mem,
-            "disk": disk
+            "disk": 10240
         }
         logger.info("Creating job in chronos: \n%s" % job)
 
