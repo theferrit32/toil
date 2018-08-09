@@ -886,7 +886,7 @@ def main(args=None, stdout=sys.stdout):
                                                 kwargs=make_tool_kwargs,
                                                 resolver=cwltool.resolver.tool_resolver,
                                                 strict=useStrict)
-
+                print("tool: " + str(vars(t)))
                 unsupportedRequirementsCheck(t.requirements)
             except cwltool.process.UnsupportedRequirement as e:
                 logging.error(e)

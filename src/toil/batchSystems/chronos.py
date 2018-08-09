@@ -174,7 +174,7 @@ class ChronosBatchSystem(BatchSystemSupport):
             "arguments": [],
             "command": (
                 "sudo docker pull heliumdatacommons/datacommons-base;"
-                + "sudo docker run --rm --privileged {} -v /toil-intermediate:/toil-intermediate -v /var/run/docker.sock:/var/run/docker.sock:rw heliumdatacommons/datacommons-base _toil_worker '{}'".format(
+                + "sudo docker run --rm --privileged {} -v /toil-intermediate:/toil-intermediate heliumdatacommons/datacommons-base _toil_worker '{}'".format(
                         env_str, # aggregated environment vars
                         " ".join(jobNode.command.split(" ")[1:])
                     ) # args after original _toil_worker
