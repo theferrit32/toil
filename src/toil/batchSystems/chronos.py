@@ -77,12 +77,20 @@ class ChronosBatchSystem(BatchSystemSupport):
         not_found_counts = {}
         not_found_fail_threshold = 5 # how many times to allow a job to not be found
         while self.running:
-            #logger.info("Checking job summary in Chronos")
             # jobs for the job store of this batch
             #remote_jobs = client.search(name=self.jobStoreID)
             # job summary info, contains status for jobs, which we need
-            remote_jobs_summary = client._call("/scheduler/jobs/summary")["jobs"]
-
+            retry = 3
+            for i in range(retry):
+                try:
+                    remote_jobs_summary = client._call("/scheduler/jobs/summary")["jobs"]
+                    break
+                except chronos.ChronosAPIError as e:
+                    print(repr(e))
+                    if i == retry - 1:
+                        raise e
+                    else:
+                        time.sleep(5)
             for cached_job in copy.copy(self.issued_jobs):
                 job_name = cached_job["name"]
                 logger.info("Checking status of job '%s'" % job_name)
@@ -96,8 +104,7 @@ class ChronosBatchSystem(BatchSystemSupport):
                     not_found_counts[job_name] += 1
                     if not_found_counts[job_name] > not_found_fail_threshold:
                         raise RuntimeError(
-                            "Chronos job not found during {} poll iterations".format(
-                                not_found_fail_threshold))
+                            "Chronos job not found during {} poll iterations".format(not_found_fail_threshold))
                     else:
                         continue #if not found, could be race condition with chronos REST API job adding
                 if remote_job["status"] != cached_job["status"]:
@@ -113,7 +120,7 @@ class ChronosBatchSystem(BatchSystemSupport):
                     if remote_job["status"] in ["failure", "success"]:
                         self.issued_jobs.remove(cached_job)
 
-            time.sleep(3)
+            time.sleep(5)
 
     def setUserScript(self, userScript):
         raise NotImplementedError()
@@ -172,7 +179,7 @@ class ChronosBatchSystem(BatchSystemSupport):
                         " ".join(jobNode.command.split(" ")[1:])
                     ) # args after original _toil_worker
             ),
-            # "constraints": [["hostname", "EQUALS", "stars-dw0.edc.renci.org"]],
+            # "constraints": [["hostname", "EQUALS", ""]],
             "owner": "",
             "disabled": False,
             "schedule": "R1//P1Y",
@@ -186,7 +193,6 @@ class ChronosBatchSystem(BatchSystemSupport):
         logger.info("Creating job in chronos: \n%s" % job)
 
         # TODO is this return value relevant?
-        #equests.post('')
         ret = client.add(job)
         print(str(ret))
         job["issued_time"] = time.time()
