@@ -154,7 +154,7 @@ class ChronosBatchSystem(BatchSystemSupport):
         for k,v in six.iteritems(os.environ):
             if k.startswith("IRODS_"):
                 env_str += "-e {}='{}' ".format(k,v)
-    
+
         job = {
             "name": job_name,
  #           "container": {
@@ -174,7 +174,7 @@ class ChronosBatchSystem(BatchSystemSupport):
             "arguments": [],
             "command": (
                 "sudo docker pull heliumdatacommons/datacommons-base;"
-                + "sudo docker run --rm --privileged {} -v /toil-intermediate:/toil-intermediate heliumdatacommons/datacommons-base _toil_worker '{}'".format(
+                + "sudo docker run --rm --privileged {} -v /toil-intermediate:/toil-intermediate -v /var/run/docker.sock:/var/run/docker.sock heliumdatacommons/datacommons-base _toil_worker '{}'".format(
                         env_str, # aggregated environment vars
                         " ".join(jobNode.command.split(" ")[1:])
                     ) # args after original _toil_worker
