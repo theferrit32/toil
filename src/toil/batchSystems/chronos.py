@@ -152,7 +152,7 @@ class ChronosBatchSystem(BatchSystemSupport):
         # all environment variables in this context that start with IRODS_ will be passed to worker containers
         env_str = ""
         for k,v in six.iteritems(os.environ):
-            if k.startswith("IRODS_"):
+            if k.startswith("IRODS_") or k == "WORKFLOW_NAME":
                 env_str += "-e {}='{}' ".format(k,v)
 
         job = {
