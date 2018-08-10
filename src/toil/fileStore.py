@@ -488,7 +488,7 @@ class CachingFileStore(FileStore):
         # cleaning up their presence from the cache state file, restore the cache file to a state
         # where the jobs don't exist.
         with self._CacheState.open(self) as cacheInfo:
-            self.findAndHandleDeadJobs(cacheInfo)
+            #self.findAndHandleDeadJobs(cacheInfo)
             # While we have a lock on the cache file, run a naive check to see if jobs on this node
             # have greatly gone over their requested limits.
             if cacheInfo.sigmaJob < 0:
@@ -1579,7 +1579,7 @@ class CachingFileStore(FileStore):
         :param dir_: The directory that will contain the cache state file.
         """
         cacheInfo = cls._CacheState._load(os.path.join(dir_, '_cacheState'))
-        cls.findAndHandleDeadJobs(cacheInfo, batchSystemShutdown=True)
+        #cls.findAndHandleDeadJobs(cacheInfo, batchSystemShutdown=True)
         shutil.rmtree(dir_)
 
     def __del__(self):
@@ -1615,7 +1615,7 @@ class NonCachingFileStore(FileStore):
         jobReqs = job.disk
         startingDir = os.getcwd()
         self.localTempDir = makePublicDir(os.path.join(self.localTempDir, str(uuid.uuid4())))
-        self.findAndHandleDeadJobs(self.workFlowDir)
+        #self.findAndHandleDeadJobs(self.workFlowDir)
         self.jobStateFile = self._createJobStateFile()
         freeSpace, diskSize = getFileSystemSize(self.localTempDir)
         if freeSpace <= 0.1 * diskSize:
@@ -1839,7 +1839,7 @@ class NonCachingFileStore(FileStore):
         """
         :param dir_: The workflow directory that will contain all the individual worker directories.
         """
-        cls.findAndHandleDeadJobs(dir_, batchSystemShutdown=True)
+        #cls.findAndHandleDeadJobs(dir_, batchSystemShutdown=True)
 
 
 class FileID(str):
