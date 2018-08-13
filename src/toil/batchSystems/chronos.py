@@ -10,6 +10,7 @@ import os
 from threading import Thread
 import six
 import copy
+import httplib
 from six.moves.queue import Empty, Queue
 from six.moves.urllib.parse import urlparse
 logger = logging.getLogger(__name__)
@@ -80,17 +81,17 @@ class ChronosBatchSystem(BatchSystemSupport):
             # jobs for the job store of this batch
             #remote_jobs = client.search(name=self.jobStoreID)
             # job summary info, contains status for jobs, which we need
-            retry = 3
+            retry = 30
             for i in range(retry):
                 try:
                     remote_jobs_summary = client._call("/scheduler/jobs/summary")["jobs"]
                     break
-                except chronos.ChronosAPIError as e:
-                    print(repr(e))
+                except (chronos.ChronosAPIError, httplib.ResponseNotReady) as e:
+                    print("Caught error in calling Chronos API: {}".format(repr(e)))
                     if i == retry - 1:
                         raise e
                     else:
-                        time.sleep(5)
+                        time.sleep(10)
             for cached_job in copy.copy(self.issued_jobs):
                 job_name = cached_job["name"]
                 logger.info("Checking status of job '%s'" % job_name)
