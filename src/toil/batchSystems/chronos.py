@@ -87,7 +87,7 @@ class ChronosBatchSystem(BatchSystemSupport):
                     remote_jobs_summary = client._call("/scheduler/jobs/summary")["jobs"]
                     break
                 except (chronos.ChronosAPIError, httplib.ResponseNotReady) as e:
-                    print("Caught error in calling Chronos API: {}".format(repr(e)))
+                    print("Caught error in calling Chronos API: {}, trying again [count={}]".format(repr(e), i))
                     if i == retry - 1:
                         raise e
                     else:
