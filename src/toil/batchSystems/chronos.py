@@ -237,7 +237,18 @@ class ChronosBatchSystem(BatchSystemSupport):
         if not self.jobStoreID:
             return {}
         client = get_chronos_client(self.chronos_endpoint, self.chronos_proto)
-        jobs = client.search(name=self.jobStoreID)
+        retry = 30
+        for i in range(retry):
+            try:
+                jobs = client.search(name=self.jobStoreID)
+                break
+            except (chronos.ChronosAPIError, httplib.ResponseNotReady) as e:
+                print("Caught error in calling Chronos API: {}, trying again [count={}]".format(repr(e), i))
+                if i == retry - 1:
+                    raise e
+                else:
+                    time.sleep(10)
+
 
         jobs_summary = client._call("/scheduler/jobs/summary")["jobs"]
         running_jobs = {}
