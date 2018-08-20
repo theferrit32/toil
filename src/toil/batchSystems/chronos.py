@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from future import standard_library
 standard_library.install_aliases()
 import logging
-import urllib
 from toil.batchSystems.abstractBatchSystem import AbstractBatchSystem, BatchSystemSupport
 import chronos
 import time
@@ -194,10 +193,11 @@ class ChronosBatchSystem(BatchSystemSupport):
         logger.info("Creating job in chronos: \n%s" % job)
         os.system('sudo apt install -y dnsutils')
         # TODO is this return value relevant?
+        chronos_domain_name = urlparse(os.environ['CHRONOS_URL']).netloc
         retry = 30
         for i in range(retry):
             try:
-                os.system('dig $CHRONOS_URL')
+                os.system('dig ' + chronos_domain_name)
                 ret = client.add(job)
                 break
             except (chronos.ChronosAPIError, httplib.ResponseNotReady) as e:
