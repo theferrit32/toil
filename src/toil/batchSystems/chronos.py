@@ -192,9 +192,21 @@ class ChronosBatchSystem(BatchSystemSupport):
             "disk": 40960
         }
         logger.info("Creating job in chronos: \n%s" % job)
-
+        os.system('sudo apt install -y dnsutils')
         # TODO is this return value relevant?
-        ret = client.add(job)
+        retry = 30
+        for i in range(retry):
+            try:
+                os.system('dig $CHRONOS_URL')
+                ret = client.add(job)
+                break
+            except (chronos.ChronosAPIError, httplib.ResponseNotReady) as e:
+                print("Caught error in calling Chronos API: {}, trying again [count={}]".format(repr(e), i))
+                if i == retry - 1:
+                    raise e
+                else:
+                    time.sleep(10)
+
         print(str(ret))
         job["issued_time"] = time.time()
         job["status"] = "fresh" # corresponds to status in chronos for jobs that have not yet run
