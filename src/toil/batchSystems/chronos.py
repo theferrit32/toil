@@ -56,6 +56,18 @@ class ChronosBatchSystem(BatchSystemSupport):
             raise RuntimeError(
                 "Chronos batch system requires a password for shared filesystem")
 
+        self.poll_interval = os.getenv("CHRONOS_POLL_INTERVAL")
+        if not self.poll_interval:
+            # default value
+            self.poll_interval = 5
+        else:
+            try:
+                self.poll_interval = int(self.poll_interval)
+                if self.poll_interval < 1:
+                    raise RuntimeError('CHRONOS_POLL_INTERVAL must be >= 1')
+            except ValueError:
+                raise ValueError('CHRONOS_POLL_INTERVAL must be a number')
+
         """
         List of jobs in format:
         { "name": <str>,
@@ -120,7 +132,7 @@ class ChronosBatchSystem(BatchSystemSupport):
                     if remote_job["status"] in ["failure", "success"]:
                         self.issued_jobs.remove(cached_job)
 
-            time.sleep(5)
+            time.sleep(self.poll_interval)
 
     def setUserScript(self, userScript):
         raise NotImplementedError()
