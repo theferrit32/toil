@@ -191,7 +191,6 @@ class ChronosBatchSystem(BatchSystemSupport):
             "disk": 40960
         }
         logger.info("Creating job in chronos: \n%s" % job)
-        os.system('sudo apt install -y dnsutils')
         # TODO is this return value relevant?
         chronos_domain_name = urlparse(os.environ['CHRONOS_URL']).netloc
         retry = 30
