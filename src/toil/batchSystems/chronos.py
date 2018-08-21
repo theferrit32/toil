@@ -103,9 +103,10 @@ class ChronosBatchSystem(BatchSystemSupport):
                         raise e
                     else:
                         time.sleep(10)
-            for cached_job in copy.copy(self.issued_jobs):
+            issued = copy.copy(self.issued_jobs)
+            logger.info("Checking status of jobs: {}".format(str([j["name"] for j in issued])))
+            for cached_job in issued:
                 job_name = cached_job["name"]
-                logger.info("Checking status of job '%s'" % job_name)
                 remote_job = None
                 for j in remote_jobs_summary:
                     if j["name"] == job_name:
