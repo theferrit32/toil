@@ -533,6 +533,9 @@ class CWLScatter(Job):
 
     def run(self, fileStore):
         cwljob = resolve_indirect(self.cwljob)
+        if not cwljob:
+            cwllogger.debug('tool: [{}]'.format(str(self.step.tool)))
+            raise RuntimeError('cwljob was empty: [{}]'.format(str(self.cwljob)))
 
         if isinstance(self.step.tool["scatter"], string_types):
             scatter = [self.step.tool["scatter"]]
