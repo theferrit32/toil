@@ -233,10 +233,19 @@ class ChronosBatchSystem(BatchSystemSupport):
     def killBatchJobs(self, jobIDs):
         client = get_chronos_client(self.chronos_endpoint, self.chronos_proto)
         for jobID in jobIDs:
-            client.delete_tasks(jobID)
-            client.delete(jobID)
-            logger.info("Removed job '{}' from chronos.".format(jobID))
-
+            retry = 30
+            for i in range(retry):
+                try:
+                    client.delete_tasks(jobID)
+                    client.delete(jobID)
+                    logger.info("Removed job '{}' from chronos.".format(jobID))
+                    break
+                except (chronos.ChronosAPIError, httplib.ResponseNotReady) as e:
+                    print("Caught error in calling Chronos API: {}, trying again [count={}]".format(repr(e), i))
+                    if i == retry - 1:
+                        raise e
+                    else:
+                        time.sleep(10)
 
 
     """
@@ -265,6 +274,7 @@ class ChronosBatchSystem(BatchSystemSupport):
         for i in range(retry):
             try:
                 jobs = client.search(name=self.jobStoreID)
+                jobs_summary = client._call("/scheduler/jobs/summary")["jobs"]
                 break
             except (chronos.ChronosAPIError, httplib.ResponseNotReady) as e:
                 print("Caught error in calling Chronos API: {}, trying again [count={}]".format(repr(e), i))
@@ -273,8 +283,6 @@ class ChronosBatchSystem(BatchSystemSupport):
                 else:
                     time.sleep(10)
 
-
-        jobs_summary = client._call("/scheduler/jobs/summary")["jobs"]
         running_jobs = {}
         for j in jobs:
             # look for this job in the job summary list (which has the state and status fields)
