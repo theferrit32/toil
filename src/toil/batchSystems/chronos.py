@@ -6,6 +6,7 @@ from toil.batchSystems.abstractBatchSystem import AbstractBatchSystem, BatchSyst
 import chronos
 import time
 import os
+import sys
 from threading import Thread
 import six
 import copy
@@ -56,17 +57,23 @@ class ChronosBatchSystem(BatchSystemSupport):
             raise RuntimeError(
                 "Chronos batch system requires a password for shared filesystem")
 
-        self.poll_interval = os.getenv("CHRONOS_POLL_INTERVAL")
-        if not self.poll_interval:
-            # default value
-            self.poll_interval = 5
-        else:
+        def int_from_env_var(varname, defaultval, minval=None, maxval=None):
+            val = os.getenv(varname)
+            if not val:
+                return defaultval
             try:
-                self.poll_interval = int(self.poll_interval)
-                if self.poll_interval < 1:
-                    raise RuntimeError('CHRONOS_POLL_INTERVAL must be >= 1')
+                val = int(val)
             except ValueError:
-                raise ValueError('CHRONOS_POLL_INTERVAL must be a number')
+                raise ValueError("{} must be a number")
+            if minval and val < minval:
+                raise RuntimeError("{} must be >= {}".format(varname, minval))
+            if maxval and val > maxval:
+                raise RuntimeError("{} must be <= {}".format(varname, maxval))
+            return val
+
+        self.poll_interval = int_from_env_var("CHRONOS_POLL_INTERVAL", 10)
+        self.retry_count = int_from_env_var("CHRONOS_RETRY_COUNT", 30)
+        self.retry_interval = int_from_env_var("CHRONOS_RETRY_INTERVAL", 20)
 
         """
         List of jobs in format:
@@ -92,17 +99,18 @@ class ChronosBatchSystem(BatchSystemSupport):
             # jobs for the job store of this batch
             #remote_jobs = client.search(name=self.jobStoreID)
             # job summary info, contains status for jobs, which we need
-            retry = 30
-            for i in range(retry):
+            chronos_domain_name = urlparse(os.environ['CHRONOS_URL']).netloc
+            for i in range(self.retry_count):
                 try:
+                    os.system('dig ' + chronos_domain_name)
                     remote_jobs_summary = client._call("/scheduler/jobs/summary")["jobs"]
                     break
                 except (chronos.ChronosAPIError, httplib.ResponseNotReady) as e:
                     print("Caught error in calling Chronos API: {}, trying again [count={}]".format(repr(e), i))
-                    if i == retry - 1:
+                    if i == self.retry_count - 1:
                         raise e
                     else:
-                        time.sleep(10)
+                        time.sleep(self.retry_interval)
             issued = copy.copy(self.issued_jobs)
             logger.info("Checking status of jobs: {}".format(str([j["name"] for j in issued])))
             for cached_job in issued:
@@ -206,18 +214,17 @@ class ChronosBatchSystem(BatchSystemSupport):
         logger.info("Creating job in chronos: \n%s" % job)
         # TODO is this return value relevant?
         chronos_domain_name = urlparse(os.environ['CHRONOS_URL']).netloc
-        retry = 30
-        for i in range(retry):
+        for i in range(self.retry_count):
             try:
                 os.system('dig ' + chronos_domain_name)
                 ret = client.add(job)
                 break
             except (chronos.ChronosAPIError, httplib.ResponseNotReady) as e:
                 print("Caught error in calling Chronos API: {}, trying again [count={}]".format(repr(e), i))
-                if i == retry - 1:
+                if i == self.retry_count - 1:
                     raise e
                 else:
-                    time.sleep(10)
+                    time.sleep(self.retry_interval)
 
         print(str(ret))
         job["issued_time"] = time.time()
@@ -233,19 +240,20 @@ class ChronosBatchSystem(BatchSystemSupport):
     def killBatchJobs(self, jobIDs):
         client = get_chronos_client(self.chronos_endpoint, self.chronos_proto)
         for jobID in jobIDs:
-            retry = 30
-            for i in range(retry):
+            chronos_domain_name = urlparse(os.environ['CHRONOS_URL']).netloc
+            for i in range(self.retry_count):
                 try:
+                    os.system('dig ' + chronos_domain_name)
                     client.delete_tasks(jobID)
                     client.delete(jobID)
                     logger.info("Removed job '{}' from chronos.".format(jobID))
                     break
                 except (chronos.ChronosAPIError, httplib.ResponseNotReady) as e:
                     print("Caught error in calling Chronos API: {}, trying again [count={}]".format(repr(e), i))
-                    if i == retry - 1:
+                    if i == self.retry_count - 1:
                         raise e
                     else:
-                        time.sleep(10)
+                        time.sleep(self.retry_interval)
 
 
     """
@@ -270,18 +278,19 @@ class ChronosBatchSystem(BatchSystemSupport):
         if not self.jobStoreID:
             return {}
         client = get_chronos_client(self.chronos_endpoint, self.chronos_proto)
-        retry = 30
-        for i in range(retry):
+        chronos_domain_name = urlparse(os.environ['CHRONOS_URL']).netloc
+        for i in range(self.retry_count):
             try:
+                os.system('dig ' + chronos_domain_name)
                 jobs = client.search(name=self.jobStoreID)
                 jobs_summary = client._call("/scheduler/jobs/summary")["jobs"]
                 break
             except (chronos.ChronosAPIError, httplib.ResponseNotReady) as e:
                 print("Caught error in calling Chronos API: {}, trying again [count={}]".format(repr(e), i))
-                if i == retry - 1:
+                if i == self.retry_count - 1:
                     raise e
                 else:
-                    time.sleep(10)
+                    time.sleep(self.retry_interval)
 
         running_jobs = {}
         for j in jobs:
