@@ -204,12 +204,11 @@ class ChronosBatchSystem(BatchSystemSupport):
             "owner": "",
             "disabled": False,
             "schedule": "R1//P1Y",
-#            "epsilon": "PT15M",
             "execute_now": True,
             "shell": True,
             "cpus": cpus,
             "mem": mem,
-            "disk": 40960
+            "disk": disk
         }
         logger.info("Creating job in chronos: \n%s" % job)
         # TODO is this return value relevant?
