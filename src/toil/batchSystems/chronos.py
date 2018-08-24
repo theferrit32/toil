@@ -75,6 +75,11 @@ class ChronosBatchSystem(BatchSystemSupport):
         self.retry_count = int_from_env_var("CHRONOS_RETRY_COUNT", 30)
         self.retry_interval = int_from_env_var("CHRONOS_RETRY_INTERVAL", 20)
 
+        self.cloud_constraint = os.getenv("TOIL_CLOUD_CONSTRAINT")
+        self.host_constraints = os.getenv("TOIL_HOST_CONSTRAINT")
+        if self.host_constraints:
+            self.host_constraints = self.host_constraints.split(",")
+
         """
         List of jobs in format:
         { "name": <str>,
@@ -102,10 +107,10 @@ class ChronosBatchSystem(BatchSystemSupport):
             chronos_domain_name = urlparse(os.environ['CHRONOS_URL']).netloc
             for i in range(self.retry_count):
                 try:
-                    os.system('dig ' + chronos_domain_name)
                     remote_jobs_summary = client._call("/scheduler/jobs/summary")["jobs"]
                     break
                 except (chronos.ChronosAPIError, httplib.ResponseNotReady) as e:
+                    os.system('dig ' + chronos_domain_name)
                     print("Caught error in calling Chronos API: {}, trying again [count={}]".format(repr(e), i))
                     if i == self.retry_count - 1:
                         raise e
@@ -200,7 +205,7 @@ class ChronosBatchSystem(BatchSystemSupport):
                         " ".join(jobNode.command.split(" ")[1:])
                     ) # args after original _toil_worker
             ),
-            # "constraints": [["hostname", "EQUALS", ""]],
+            "constraints": [],
             "owner": "",
             "disabled": False,
             "schedule": "R1//P1Y",
@@ -210,15 +215,23 @@ class ChronosBatchSystem(BatchSystemSupport):
             "mem": mem,
             "disk": disk
         }
+
+        if self.cloud_constraint:
+            job["constraints"].append(["cloud", "EQUALS", str(self.cloud_constraint)])
+
+        if self.host_constraints:
+            for h in self.host_constraints:
+                job["constraints"].append(["hostname", "EQUALS", str(h)])
+
         logger.info("Creating job in chronos: \n%s" % job)
         # TODO is this return value relevant?
         chronos_domain_name = urlparse(os.environ['CHRONOS_URL']).netloc
         for i in range(self.retry_count):
             try:
-                os.system('dig ' + chronos_domain_name)
                 ret = client.add(job)
                 break
             except (chronos.ChronosAPIError, httplib.ResponseNotReady) as e:
+                os.system('dig ' + chronos_domain_name)
                 print("Caught error in calling Chronos API: {}, trying again [count={}]".format(repr(e), i))
                 if i == self.retry_count - 1:
                     raise e
@@ -242,12 +255,12 @@ class ChronosBatchSystem(BatchSystemSupport):
             chronos_domain_name = urlparse(os.environ['CHRONOS_URL']).netloc
             for i in range(self.retry_count):
                 try:
-                    os.system('dig ' + chronos_domain_name)
                     client.delete_tasks(jobID)
                     client.delete(jobID)
                     logger.info("Removed job '{}' from chronos.".format(jobID))
                     break
                 except (chronos.ChronosAPIError, httplib.ResponseNotReady) as e:
+                    os.system('dig ' + chronos_domain_name)
                     print("Caught error in calling Chronos API: {}, trying again [count={}]".format(repr(e), i))
                     if i == self.retry_count - 1:
                         raise e
@@ -280,11 +293,11 @@ class ChronosBatchSystem(BatchSystemSupport):
         chronos_domain_name = urlparse(os.environ['CHRONOS_URL']).netloc
         for i in range(self.retry_count):
             try:
-                os.system('dig ' + chronos_domain_name)
                 jobs = client.search(name=self.jobStoreID)
                 jobs_summary = client._call("/scheduler/jobs/summary")["jobs"]
                 break
             except (chronos.ChronosAPIError, httplib.ResponseNotReady) as e:
+                os.system('dig ' + chronos_domain_name)
                 print("Caught error in calling Chronos API: {}, trying again [count={}]".format(repr(e), i))
                 if i == self.retry_count - 1:
                     raise e
