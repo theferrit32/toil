@@ -76,9 +76,7 @@ class ChronosBatchSystem(BatchSystemSupport):
         self.retry_interval = int_from_env_var("CHRONOS_RETRY_INTERVAL", 20)
 
         self.cloud_constraint = os.getenv("TOIL_CLOUD_CONSTRAINT")
-        self.host_constraints = os.getenv("TOIL_HOST_CONSTRAINT")
-        if self.host_constraints:
-            self.host_constraints = self.host_constraints.split(",")
+        self.host_constraint = os.getenv("TOIL_HOST_CONSTRAINT")
 
         """
         List of jobs in format:
@@ -219,9 +217,8 @@ class ChronosBatchSystem(BatchSystemSupport):
         if self.cloud_constraint:
             job["constraints"].append(["cloud", "EQUALS", str(self.cloud_constraint)])
 
-        if self.host_constraints:
-            for h in self.host_constraints:
-                job["constraints"].append(["hostname", "EQUALS", str(h)])
+        if self.host_constraint:
+            job["constraints"].append(["hostname", "EQUALS", str(self.host_constraint)])
 
         logger.info("Creating job in chronos: \n%s" % job)
         # TODO is this return value relevant?
