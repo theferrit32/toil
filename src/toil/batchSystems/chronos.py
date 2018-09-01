@@ -215,9 +215,11 @@ class ChronosBatchSystem(BatchSystemSupport):
         }
 
         if self.cloud_constraint:
+            logger.info("Setting cloud constraint: " + str(self.cloud_constraint))
             job["constraints"].append(["cloud", "EQUALS", str(self.cloud_constraint)])
 
         if self.host_constraint:
+            logger.info("Setting host constraint: " + str(self.host_constraint))
             job["constraints"].append(["hostname", "EQUALS", str(self.host_constraint)])
 
         logger.info("Creating job in chronos: \n%s" % job)
